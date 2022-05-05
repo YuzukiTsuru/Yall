@@ -154,17 +154,17 @@ public:
     void operator=(Yall const &) = delete;
 
     static Yall_Instance &GetYall(Yall_LEVEL logLevel) {
-        auto it = GetInstance().loggers.find(logLevel);
-        if (it == GetInstance().loggers.end()) {
+        auto it = GetInstance().yall_inst.find(logLevel);
+        if (it == GetInstance().yall_inst.end()) {
             auto *logger = new Yall_Instance(logLevel);
-            GetInstance().loggers[logLevel] = logger;
+            GetInstance().yall_inst[logLevel] = logger;
             return *logger;
         }
         return *it->second;
     };
 
 private:
-    std::unordered_map<Yall_LEVEL, Yall_Instance *> loggers;
+    std::unordered_map<Yall_LEVEL, Yall_Instance *> yall_inst;
 
     Yall() = default;;
 
