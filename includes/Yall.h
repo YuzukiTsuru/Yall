@@ -153,10 +153,17 @@ public:
 #endif
     }
 
-    void EnableDebug(){
+    [[maybe_unused]] void EnableDebug() {
         auto it = std::find(streams.begin(), streams.end(), &std::cout);
         if (it == streams.end())
             streams.push_back(&std::cout);
+    }
+
+    [[maybe_unused]] void DisableDebug() {
+        auto it = std::find(streams.begin(), streams.end(), &std::cout);
+        if (it == streams.end())
+            return;
+        streams.erase(it);
     }
 
     void operator<<(const std::string &msg) override {
