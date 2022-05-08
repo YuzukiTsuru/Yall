@@ -101,6 +101,28 @@ class Yall_Instance {
 public:
     explicit Yall_Instance(Yall_LEVEL logLevel) : logLevel(logLevel) {
         streams.push_back(&std::cout);
+#ifdef DEBUG_MODE
+#if DEBUG_MODE
+        debug_stream = &std::cout;
+#endif
+#else
+        debug_stream = &std::cout;
+#endif
+    }
+
+    void YallAddStream(std::ostream *stream) {
+        streams.push_back(stream);
+    }
+
+    void YallRemoveStream(std::ostream *stream) {
+        auto it = std::find(streams.begin(), streams.end(), stream);
+        if (it == streams.end())
+            return;
+        streams.erase(it);
+    }
+
+    void DebugEnable() {
+        debug_stream = &std::cout;
     }
 
     void operator<<(const std::string &msg) {
@@ -108,7 +130,7 @@ public:
         for (auto &stream: streams) {
             switch (logLevel) {
                 case Yall_LEVEL::LOG_DEBUG:
-                    *stream << cc::white << "[DEBUG]" << cc::reset;
+                    *debug_stream << cc::white << "[DEBUG]" << cc::reset;
                     break;
                 case Yall_LEVEL::LOG_INFO:
                     *stream << cc::cyan << "[INFO]" << cc::reset;
@@ -123,10 +145,10 @@ public:
                     *stream << cc::on_red << "[CRITICAL]" << cc::reset;
                     break;
                 case Yall_LEVEL::LOG_FILE:
-                    *stream << cc::green << "[FILE]" << cc::reset;
+                    *stream << cc::cyan << "[FILE]" << cc::reset;
                     break;
                 case Yall_LEVEL::LOG_FUNC:
-                    *stream << cc::magenta << "[FUNC]" << cc::reset;
+                    *stream << cc::yellow << "[FUNC]" << cc::reset;
                     break;
                 case Yall_LEVEL::LOG_LINE:
                     *stream << cc::white << "[LINE]" << cc::reset;
@@ -134,7 +156,7 @@ public:
                 default:
                     break;
             }
-            *stream << " " << msg << " ";
+            *stream << debug_stream << " " << msg << " ";
             if (logLevel != Yall_LEVEL::LOG_FILE && logLevel != Yall_LEVEL::LOG_FUNC && logLevel != Yall_LEVEL::LOG_LINE)
                 *stream << std::endl;
         }
@@ -143,6 +165,7 @@ public:
 private:
     std::string name;
     Yall_LEVEL logLevel;
+    std::ostream *debug_stream;
     std::vector<std::ostream *> streams;
     std::mutex streamMtx;
 };
@@ -189,4 +212,4 @@ private:
 #define YALL_ERROR_       YALL_FILE_; YALL_FUNC_; Yall::GetYall(Yall_LEVEL::LOG_ERROR)
 #define YALL_CRITICAL_    YALL_FILE_; YALL_FUNC_; Yall::GetYall(Yall_LEVEL::LOG_CRITICAL)
 
-#endif
+#endif // YALL_H
