@@ -1,6 +1,10 @@
 # Yall
 Yall - Yet another logging library
 
+
+
+## Usage
+
 ```c++
 #include "Yall.h"
 
@@ -31,3 +35,10 @@ int main() {
     YALL_CRITICAL_ << "LOG Cirtical";
 }
 ```
+
+
+
+## ScreenShots
+
+![screen](.github/ScreenShot.PNG)
+
