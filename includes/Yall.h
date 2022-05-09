@@ -91,10 +91,6 @@ enum Yall_LEVEL {
     LOG_WARN,
     LOG_ERROR,
     LOG_CRITICAL,
-    // Private usage
-    LOG_FILE,
-    LOG_FUNC,
-    LOG_LINE,
 };
 
 class Yall_Inst {
@@ -138,9 +134,7 @@ public:
                 default:
                     break;
             }
-            *stream << " " << msg << " ";
-            if (logLevel != Yall_LEVEL::LOG_FILE && logLevel != Yall_LEVEL::LOG_FUNC && logLevel != Yall_LEVEL::LOG_LINE)
-                *stream << std::endl;
+            *stream << " " << msg << " " << std::endl;
         }
     };
 };
@@ -148,9 +142,12 @@ public:
 class Yall_Debug_Instance : Yall_Inst {
 public:
     explicit Yall_Debug_Instance(Yall_LEVEL logLevel) : Yall_Inst(logLevel) {
-#ifdef DEBUG_MODE
-        streams.push_back(&std::cout);
-#endif
+    }
+
+    void SetDebugInfo(const std::string &file, const std::string &func, int line) {
+        this->FILE = file;
+        this->FUNC = func;
+        this->LINE = line;
     }
 
     [[maybe_unused]] void EnableDebug() {
@@ -169,27 +166,17 @@ public:
     void operator<<(const std::string &msg) override {
         std::lock_guard<std::mutex> lock(streamMtx);
         for (auto &stream: streams) {
-            switch (logLevel) {
-                case Yall_LEVEL::LOG_DEBUG:
-                    *stream << cc::white << "[DEBUG]" << cc::reset;
-                    break;
-                case Yall_LEVEL::LOG_FUNC:
-                    *stream << cc::cyan << "[FUNC]" << cc::reset;
-                    break;
-                case Yall_LEVEL::LOG_FILE:
-                    *stream << cc::yellow << "[FILE]" << cc::reset;
-                    break;
-                case Yall_LEVEL::LOG_LINE:
-                    *stream << cc::green << "[LINE]" << cc::reset;
-                    break;
-                default:
-                    break;
-            }
-            *stream << " " << msg << " ";
-            if (logLevel != Yall_LEVEL::LOG_FILE && logLevel != Yall_LEVEL::LOG_FUNC && logLevel != Yall_LEVEL::LOG_LINE)
-                *stream << std::endl;
+            *stream << cc::cyan << "[FUNC] " << cc::reset << this->FUNC << " "
+                    << cc::yellow << "[FILE] " << cc::reset << this->FILE << " "
+                    << cc::green << "[LINE] " << cc::reset << this->LINE << " "
+                    << cc::white << "[DEBUG]" << cc::reset << msg << " " << std::endl;
         }
-    };
+    }
+
+private:
+    std::string FILE = {};
+    std::string FUNC = {};
+    int LINE = {};
 };
 
 class Yall {
@@ -208,13 +195,15 @@ public:
         return *it->second;
     };
 
-    static Yall_Debug_Instance &GetDebugYall(Yall_LEVEL logLevel) {
+    static Yall_Debug_Instance &GetDebugYall(Yall_LEVEL logLevel, const std::string &FILE, const std::string &FUNC, int LINE) {
         auto it = GetDebugInstance().yall_debug_inst.find(logLevel);
         if (it == GetDebugInstance().yall_debug_inst.end()) {
             auto *logger = new Yall_Debug_Instance(logLevel);
             GetDebugInstance().yall_debug_inst[logLevel] = logger;
+            logger->SetDebugInfo(FILE, FUNC, LINE);
             return *logger;
         }
+        it->second->SetDebugInfo(FILE, FUNC, LINE);
         return *it->second;
     };
 
@@ -236,21 +225,13 @@ private:
 };
 
 
-#define YALL_FILE_ Yall::GetDebugYall(Yall_LEVEL::LOG_FILE) << __FILE__
-
 #if __GNUC__
-#define YALL_FUNC_ Yall::GetDebugYall(Yall_LEVEL::LOG_FUNC) << __PRETTY_FUNCTION__
+#define YALL_FUNC_        __PRETTY_FUNCTION__
 #else
-#define YALL_FUNC_ Yall::GetDebugYall(Yall_LEVEL::LOG_FUNC) << __func__
+#define YALL_FUNC_        __func__
 #endif
 
-#ifdef __LINE__
-#define YALL_LINE_ Yall::GetDebugYall(Yall_LEVEL::LOG_LINE) << std::to_string(__LINE__)
-#define YALL_DEBUG_       YALL_FILE_; YALL_FUNC_;YALL_LINE_; Yall::GetDebugYall(Yall_LEVEL::LOG_DEBUG)
-#else
-#define YALL_DEBUG_       YALL_FILE_; YALL_FUNC_; Yall::GetDebugYall(Yall_LEVEL::LOG_DEBUG)
-#endif
-
+#define YALL_DEBUG_       Yall::GetDebugYall(Yall_LEVEL::LOG_DEBUG, __FILE__, YALL_FUNC_, __LINE__)
 #define YALL_INFO_        Yall::GetYall(Yall_LEVEL::LOG_INFO)
 #define YALL_WARN_        Yall::GetYall(Yall_LEVEL::LOG_WARN)
 #define YALL_ERROR_       Yall::GetYall(Yall_LEVEL::LOG_ERROR)
