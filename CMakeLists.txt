@@ -5,7 +5,7 @@ project(Yall VERSION 1.00 LANGUAGES CXX)
 include_directories(includes)
 
 add_library(${PROJECT_NAME} INTERFACE)
-target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/includes)
+target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 option(TEST "Build TEST" OFF)
 
