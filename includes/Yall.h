@@ -141,8 +141,7 @@ public:
 
 class Yall_Debug_Instance : Yall_Inst {
 public:
-    explicit Yall_Debug_Instance(Yall_LEVEL logLevel) : Yall_Inst(logLevel) {
-    }
+    explicit Yall_Debug_Instance(Yall_LEVEL logLevel) : Yall_Inst(logLevel) {}
 
     void SetDebugInfo(const std::string &file, const std::string &func, int line) {
         this->FILE = file;
@@ -166,10 +165,10 @@ public:
     void operator<<(const std::string &msg) override {
         std::lock_guard<std::mutex> lock(streamMtx);
         for (auto &stream: streams) {
-            *stream << cc::cyan << "[FUNC] " << cc::reset << this->FUNC << " "
-                    << cc::yellow << "[FILE] " << cc::reset << this->FILE << " "
-                    << cc::green << "[LINE] " << cc::reset << this->LINE << " "
-                    << cc::white << "[DEBUG]" << cc::reset << msg << " " << std::endl;
+            *stream << cc::cyan << "[FUNC] " << std::left << std::setw(23) << cc::reset << fmt(this->FUNC) << " "
+                    << cc::yellow << "[FILE] " << std::setw(23) << cc::reset << fmt(this->FILE) << " "
+                    << cc::green << "[LINE] " << std::setw(4) << cc::reset << this->LINE << " "
+                    << cc::white << "[DEBUG] " << cc::reset << msg << " " << std::endl;
         }
     }
 
@@ -177,6 +176,15 @@ private:
     std::string FILE = {};
     std::string FUNC = {};
     int LINE = {};
+private:
+    // Get the last 20 char
+    static std::string fmt(std::string_view sv) {
+        if (sv.length() > 20) {
+            return std::string("...") + sv.substr(sv.length() - 20, sv.length()).data();
+        } else {
+            return sv.data();
+        }
+    }
 };
 
 class Yall {
