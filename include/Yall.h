@@ -86,7 +86,10 @@ type &operator<<(type &ostream, const cc color) {
 }
 
 enum Yall_LEVEL {
+    LOG_DUMP,
+    LOG_EVAL,
     LOG_DEBUG,
+    LOG_OK,
     LOG_INFO,
     LOG_WARN,
     LOG_ERROR,
@@ -101,47 +104,49 @@ public:
 
     virtual void operator<<(const std::string &msg) {};
 
-private:
 protected:
     std::string name;
     Yall_LEVEL logLevel;
     std::mutex streamMtx;
-    std::vector<std::ostream *> streams;
 };
 
 class Yall_Instance : Yall_Inst {
 public:
-    explicit Yall_Instance(Yall_LEVEL logLevel) : Yall_Inst(logLevel) {
-        streams.push_back(&std::cout);
-    };
+    explicit Yall_Instance(Yall_LEVEL logLevel) : Yall_Inst(logLevel) {};
 
     void operator<<(const std::string &msg) override {
         std::lock_guard<std::mutex> lock(streamMtx);
-        for (auto &stream: streams) {
-            switch (logLevel) {
-                case Yall_LEVEL::LOG_INFO:
-                    *stream << cc::cyan << "[INFO]" << cc::reset;
-                    break;
-                case Yall_LEVEL::LOG_WARN:
-                    *stream << cc::yellow << "[WARNING]" << cc::reset;
-                    break;
-                case Yall_LEVEL::LOG_ERROR:
-                    *stream << cc::red << "[ERROR]" << cc::reset;
-                    break;
-                case Yall_LEVEL::LOG_CRITICAL:
-                    *stream << cc::on_red << "[CRITICAL]" << cc::reset;
-                    break;
-                default:
-                    break;
-            }
-            *stream << " " << msg << " " << std::endl;
+        switch (logLevel) {
+            case Yall_LEVEL::LOG_OK:
+                std::cout << cc::green << "[OKAY]" << cc::reset;
+                break;
+            case Yall_LEVEL::LOG_INFO:
+                std::cout << cc::cyan << "[INFO]" << cc::reset;
+                break;
+            case Yall_LEVEL::LOG_WARN:
+                std::cout << cc::yellow << "[WARN]" << cc::reset;
+                break;
+            case Yall_LEVEL::LOG_ERROR:
+                std::cout << cc::red << "[ERRO]" << cc::reset;
+                break;
+            case Yall_LEVEL::LOG_CRITICAL:
+                std::cout << cc::on_red << "[CRIT]" << cc::reset;
+                break;
+            case Yall_LEVEL::LOG_EVAL:
+                std::cout << cc::magenta << "[TIME]" << cc::reset;
+                break;
+            default:
+                break;
         }
+        std::cout << " " << msg << " " << std::endl;
     };
 };
 
 class Yall_Debug_Instance : Yall_Inst {
 public:
-    explicit Yall_Debug_Instance(Yall_LEVEL logLevel) : Yall_Inst(logLevel) {}
+    explicit Yall_Debug_Instance(Yall_LEVEL logLevel) : Yall_Inst(logLevel) {
+        enable = false;
+    }
 
     void SetDebugInfo(const std::string &file, const std::string &func, int line) {
         this->FILE = file;
@@ -150,25 +155,30 @@ public:
     }
 
     [[maybe_unused]] void EnableDebug() {
-        auto it = std::find(streams.begin(), streams.end(), &std::cout);
-        if (it == streams.end())
-            streams.push_back(&std::cout);
+        enable = true;
     }
 
     [[maybe_unused]] void DisableDebug() {
-        auto it = std::find(streams.begin(), streams.end(), &std::cout);
-        if (it == streams.end())
-            return;
-        streams.erase(it);
+        enable = false;
     }
 
     void operator<<(const std::string &msg) override {
         std::lock_guard<std::mutex> lock(streamMtx);
-        for (auto &stream: streams) {
-            *stream << cc::cyan << "[FUNC] " << std::left << std::setw(23) << cc::reset << fmt(this->FUNC) << " "
-                    << cc::yellow << "[FILE] " << std::setw(23) << cc::reset << fmt(this->FILE) << " "
-                    << cc::green << "[LINE] " << std::setw(4) << cc::reset << this->LINE << " "
-                    << cc::white << "[DEBUG] " << cc::reset << msg << " " << std::endl;
+        switch (logLevel) {
+            case LOG_DUMP:
+                std::cout << cc::cyan << "[FUNC] " << std::left << std::setw(23) << cc::reset << fmt(this->FUNC) << " "
+                       << cc::yellow << "[FILE] " << std::setw(23) << cc::reset << fmt(this->FILE) << " "
+                       << cc::green << "[LINE] " << std::setw(4) << cc::reset << this->LINE << " "
+                       << cc::white << "[DUMP] " << cc::reset << msg << " " << std::endl;
+                break;
+            case LOG_DEBUG:
+                std::cout << cc::cyan << "[FUNC] " << std::left << std::setw(23) << cc::reset << fmt(this->FUNC) << " "
+                       << cc::yellow << "[FILE] " << std::setw(23) << cc::reset << fmt(this->FILE) << " "
+                       << cc::green << "[LINE] " << std::setw(4) << cc::reset << this->LINE << " "
+                       << cc::white << "[DEBUG] " << cc::reset << msg << " " << std::endl;
+                break;
+            default:
+                break;
         }
     }
 
@@ -176,6 +186,10 @@ private:
     std::string FILE = {};
     std::string FUNC = {};
     int LINE = {};
+
+private:
+    bool enable = false;
+
 private:
     // Get the last 20 char
     static std::string fmt(std::string_view sv) {
@@ -239,10 +253,15 @@ private:
 #define YALL_FUNC_        __func__
 #endif
 
+#define YALL_DUMP_        Yall::GetDebugYall(Yall_LEVEL::LOG_DUMP, __FILE__, YALL_FUNC_, __LINE__)
 #define YALL_DEBUG_       Yall::GetDebugYall(Yall_LEVEL::LOG_DEBUG, __FILE__, YALL_FUNC_, __LINE__)
+#define YALL_OK_          Yall::GetYall(Yall_LEVEL::LOG_OK)
+#define YALL_EVAL_        Yall::GetYall(Yall_LEVEL::LOG_EVAL)
 #define YALL_INFO_        Yall::GetYall(Yall_LEVEL::LOG_INFO)
 #define YALL_WARN_        Yall::GetYall(Yall_LEVEL::LOG_WARN)
 #define YALL_ERROR_       Yall::GetYall(Yall_LEVEL::LOG_ERROR)
 #define YALL_CRITICAL_    Yall::GetYall(Yall_LEVEL::LOG_CRITICAL)
+
+#endif //LESSAMPLER_LOG_H
 
 #endif // YALL_H
