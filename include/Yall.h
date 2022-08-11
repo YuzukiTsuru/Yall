@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <sstream>
 #include <mutex>
+#include <iostream>
 #include <iomanip>
 
 #ifdef WIN32
@@ -261,7 +262,5 @@ private:
 #define YALL_WARN_        Yall::GetYall(Yall_LEVEL::LOG_WARN)
 #define YALL_ERROR_       Yall::GetYall(Yall_LEVEL::LOG_ERROR)
 #define YALL_CRITICAL_    Yall::GetYall(Yall_LEVEL::LOG_CRITICAL)
-
-#endif //LESSAMPLER_LOG_H
 
 #endif // YALL_H
